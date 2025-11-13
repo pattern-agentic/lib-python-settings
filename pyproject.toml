@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pattern_agentic_settings"
+version = "1.0.0"
+description = "Pydantic-powered config management"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic-settings>=2.0.0",
+  "pydantic>=2.0.0"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pattern_agentic_settings"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.1",
+]
+
