@@ -8,6 +8,7 @@ import logging
 import importlib
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class PABaseSettings(BaseSettings):
