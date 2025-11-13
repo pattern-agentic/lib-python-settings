@@ -6,8 +6,16 @@ build-backend = "hatchling.build"
 name = "pattern_agentic_settings"
 version = "1.0.0"
 description = "Pydantic-powered config management"
+authors = [
+  { name="Amos Joshua", email="amos@patternagentic.ai" }
+]
 readme = "README.md"
 requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
 dependencies = [
   "pydantic-settings>=2.0.0",
   "pydantic>=2.0.0"
