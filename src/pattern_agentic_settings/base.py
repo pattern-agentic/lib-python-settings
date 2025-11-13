@@ -2,10 +2,8 @@ from typing import Optional
 
 from pydantic import ValidationError, Field
 from pydantic_settings import BaseSettings
-#from watchfiles import awatch
 
 import os
-import asyncio
 import logging
 import importlib
 
@@ -13,9 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class PABaseSettings(BaseSettings):
-    _reload_lock: asyncio.Lock = asyncio.Lock()
-    _env_watch_task: asyncio.Task
-
     dot_env: Optional[str] = Field(default=None, description="The path to the .env file to load env variables from (optional)")
     app_name: str
     app_version: str
@@ -62,25 +57,6 @@ class PABaseSettings(BaseSettings):
                 setattr(self, k, v)
         logger.info("-------------------")
 
-    async def _watch_env_file(self):
-        logger.info(f"Watching for changes in {self.dot_env}")
-
-        async for changes in awatch(self.dot_env):
-            logger.info("------------------------------")
-            logger.info(f"Detected env change: {changes}")
-            async with self._reload_lock:
-                try:
-                    self.reload()
-                except Exception as exc:
-                    logging.error(
-                        f"Failed to reload settings: {exc}",
-                        exc_info=True
-                    )
-
-    def watch_env_file(self):
-        if self.dot_env:
-            loop = asyncio.get_running_loop()
-            self._env_watch_task = loop.create_task(self._watch_env_file())
 
     def safe_describe(self, indent="  "):
         sensitive_keys = [

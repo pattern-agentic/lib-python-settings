@@ -13,11 +13,19 @@ dependencies = [
   "pydantic>=2.0.0"
 ]
 
+[project.optional-dependencies]
+hotreload = ["watchfiles>=0.20.0"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/pattern_agentic_settings"]
 
 [dependency-groups]
 dev = [
     "pytest>=9.0.1",
+    "pytest-asyncio>=0.21.1",
 ]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
