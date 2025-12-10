@@ -4,11 +4,20 @@ from pydantic import ValidationError, Field
 from pydantic_settings import BaseSettings
 
 import os
+import sys
 import logging
 import importlib
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+
+def _create_default_logger():
+    lg = logging.getLogger(__name__)
+    lg.setLevel(logging.INFO)
+    if not lg.handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+        lg.addHandler(handler)
+        lg.propagate = False
+    return lg
 
 
 class PABaseSettings(BaseSettings):
@@ -54,9 +63,9 @@ class PABaseSettings(BaseSettings):
         for k, v in new_values.items():
             old = getattr(self, k)
             if v != old:
-                logger.info(f"Reloading changed parameter {k}")
+                self._logger.info(f"Reloading changed parameter {k}")
                 setattr(self, k, v)
-        logger.info("-------------------")
+        self._logger.info("-------------------")
 
 
     def safe_describe(self, indent="  "):
@@ -86,8 +95,12 @@ class PABaseSettings(BaseSettings):
              app_name: Optional[str] = None,
              app_version: Optional[str] = None,
              fallback_version: Optional[str] = None,
-             log_conf_on_startup: bool = True
+             log_conf_on_startup: bool = True,
+             logger: Optional[logging.Logger] = None
              ):
+        if logger is None:
+            logger = _create_default_logger()
+
         env_prefix = cls.model_config.get('env_prefix', '')
         dot_env_path = os.environ.get(f"{env_prefix}DOT_ENV", None)
         if dot_env_path and not os.path.isfile(dot_env_path):
@@ -104,7 +117,8 @@ class PABaseSettings(BaseSettings):
 
         try:
             settings = cls(app_version=version, app_name=pretty_app_name, _env_file=dot_env_path)
-            logger.info(f"{app_name} v{version}")
+            settings._logger = logger
+            logger.info(f"{pretty_app_name} v{version}")
             if log_conf_on_startup:
                 logger.info(f"\nConfiguration:\n{settings.safe_describe()}\n--------------------\n")
             return settings
