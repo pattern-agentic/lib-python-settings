@@ -19,9 +19,12 @@ class HotReloadMixin:
         self._env_watch_task = None
 
     async def _watch_env_file(self):
-        logger.info(f"Watching for changes in {self.dot_env}")
+        paths = [p for p in [self.dot_env, self.dot_env_secrets] if p]
+        if not paths:
+            return
+        logger.info(f"Watching for changes in {paths}")
 
-        async for changes in awatch(self.dot_env):
+        async for changes in awatch(*paths):
             logger.info("------------------------------")
             logger.info(f"Detected env change: {changes}")
             async with self._reload_lock:
@@ -34,7 +37,7 @@ class HotReloadMixin:
                     )
 
     def watch_env_file(self):
-        if self.dot_env:
+        if self.dot_env or self.dot_env_secrets:
             loop = asyncio.get_running_loop()
             self._env_watch_task = loop.create_task(self._watch_env_file())
 
