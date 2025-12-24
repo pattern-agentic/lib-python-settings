@@ -22,6 +22,7 @@ def _create_default_logger():
 
 class PABaseSettings(BaseSettings):
     dot_env: Optional[str] = Field(default=None, description="The path to the .env file to load env variables from (optional)")
+    dot_env_secrets: Optional[str] = Field(default=None, description="The path to a secrets .env file (optional, overrides dot_env values)")
     app_name: str
     app_version: str
 
@@ -55,9 +56,13 @@ class PABaseSettings(BaseSettings):
 
     def reload(self):
         """Reload env files and update this instance in-place."""
+        env_files = [p for p in [self.dot_env, self.dot_env_secrets] if p]
         new_instance = self.__class__(
             app_version=self.app_version,
-            _env_file=self.dot_env
+            app_name=self.app_name,
+            dot_env=self.dot_env,
+            dot_env_secrets=self.dot_env_secrets,
+            _env_file=env_files if env_files else None
         )
         new_values = new_instance.model_dump()
         for k, v in new_values.items():
@@ -106,6 +111,13 @@ class PABaseSettings(BaseSettings):
         if dot_env_path and not os.path.isfile(dot_env_path):
             logger.warning(f"WARNING: dot env file '{dot_env_path}' does not exist\n")
 
+        dot_env_secrets_path = os.environ.get(f"{env_prefix}DOT_ENV_SECRETS", None)
+        if dot_env_secrets_path and not os.path.isfile(dot_env_secrets_path):
+            logger.warning(f"WARNING: secrets file '{dot_env_secrets_path}' does not exist\n")
+
+        env_files = [p for p in [dot_env_path, dot_env_secrets_path] if p]
+        env_file_arg = env_files if env_files else None
+
         version = app_version
         if not version:
             version = PABaseSettings._version_from_importlib(package_name, fallback_version)
@@ -116,7 +128,13 @@ class PABaseSettings(BaseSettings):
             pretty_app_name = " ".join(word.capitalize() for word in components)
 
         try:
-            settings = cls(app_version=version, app_name=pretty_app_name, _env_file=dot_env_path)
+            settings = cls(
+                app_version=version,
+                app_name=pretty_app_name,
+                dot_env=dot_env_path,
+                dot_env_secrets=dot_env_secrets_path,
+                _env_file=env_file_arg
+            )
             settings._logger = logger
             logger.info(f"{pretty_app_name} v{version}")
             if log_conf_on_startup:
