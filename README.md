@@ -9,6 +9,17 @@ A settings class based on pydantic-settings that facilitates:
   - optional hot reload using watchfiles
 
 
+## Installation
+
+    pip install pattern_agentic_settings[hotreload]
+
+Note that without the hotreload extension:
+
+    pip install pattern_agentic_settings
+
+watchfiles is not pulled in, and dot envs will not auto-reload. 
+
+
 ## Example
 
 ```python

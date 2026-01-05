@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pattern_agentic_settings"
-version = "1.3.0"
+version = "2.0.0"
 description = "Pydantic-powered config management"
 authors = [
   { name="Amos Joshua", email="amos@patternagentic.ai" }
