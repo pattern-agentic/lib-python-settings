@@ -1,4 +1,9 @@
 
+# 1.2.0
+
+Improvements:
+
+  - add support for multiple dot env files: `$PREFIX_DOT_ENV`, `$PREFIX_DOT_ENV_SECRETS`
 
 # 1.1.0
 
