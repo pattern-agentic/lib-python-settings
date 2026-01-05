@@ -33,6 +33,12 @@ class Settings(PABaseSettings):
 # if MYAPP_DOT_ENV points to a file, will try to load vars from it
 # throws an error if not defined
 settings = Settings.load('my_app')
+
+# This will watch the env file on disk and reload values if it changes
+# This must be called in the context of an existing async runloop
+# it also requires the hotreload extension (see Installation)
+
+settings.watch_env_file()
 ```
 
 Exepcted output:
