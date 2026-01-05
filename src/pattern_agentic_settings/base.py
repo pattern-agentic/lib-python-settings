@@ -152,8 +152,7 @@ class PABaseSettings(BaseSettings):
              app_version: Optional[str] = None,
              fallback_version: Optional[str] = None,
              log_conf_on_startup: bool = True,
-             logger: Optional[logging.Logger] = None,
-             watch_env_files: bool = False
+             logger: Optional[logging.Logger] = None
              ):
         if logger is None:
             logger = _create_default_logger()
@@ -203,8 +202,6 @@ class PABaseSettings(BaseSettings):
             logger.info(f"{pretty_app_name} v{version}")
             if log_conf_on_startup:
                 logger.info(f"\nConfiguration:\n{settings.safe_describe()}\n--------------------\n")
-            if watch_env_files:
-                settings.watch_env_file()
             return settings
         except ValidationError as exc:
             error_msg = PABaseSettings.format_config_validation_error(exc)

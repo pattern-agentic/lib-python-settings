@@ -5,7 +5,6 @@ Improvements:
 
   - add support for injecting dot evn files via `__PA_SETTINGS_DOT_ENVS`
   - automatically load watchfiles if dependency available
-  - add `watch_env_files` attr to `load()` method
   
 Breaking changes:
 

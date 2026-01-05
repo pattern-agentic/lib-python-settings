@@ -56,18 +56,6 @@ class TestHotReload:
         await asyncio.sleep(0.1)
         assert settings._env_watch_task.cancelled() or settings._env_watch_task.done()
 
-    @pytest.mark.asyncio
-    async def test_watch_env_files_param_in_load(self, monkeypatch, tmp_path):
-        env_file = tmp_path / ".env"
-        env_file.write_text("TST_WORKER_COUNT=5\n")
-
-        monkeypatch.setenv('TST_DOT_ENV', str(env_file))
-
-        settings = self.Settings.load('pattern_agentic_settings', watch_env_files=True)
-        assert settings._env_watch_task is not None
-
-        settings.stop_watching()
-
     def test_stop_watching_without_task(self, monkeypatch):
         monkeypatch.setenv('TST_WORKER_COUNT', '10')
         settings = self.Settings.load('pattern_agentic_settings')
@@ -93,21 +81,5 @@ class TestHotReloadNotAvailable:
             settings = self.Settings.load('pattern_agentic_settings')
             with pytest.raises(ImportError, match="Hot reload requires watchfiles"):
                 settings.watch_env_file()
-        finally:
-            base_module.WATCHFILES_AVAILABLE = original
-
-    def test_watch_env_files_param_raises_when_unavailable(self, monkeypatch, tmp_path):
-        env_file = tmp_path / ".env"
-        env_file.write_text("TST_WORKER_COUNT=5\n")
-
-        monkeypatch.setenv('TST_DOT_ENV', str(env_file))
-
-        import pattern_agentic_settings.base as base_module
-        original = base_module.WATCHFILES_AVAILABLE
-        base_module.WATCHFILES_AVAILABLE = False
-
-        try:
-            with pytest.raises(ImportError, match="Hot reload requires watchfiles"):
-                self.Settings.load('pattern_agentic_settings', watch_env_files=True)
         finally:
             base_module.WATCHFILES_AVAILABLE = original
