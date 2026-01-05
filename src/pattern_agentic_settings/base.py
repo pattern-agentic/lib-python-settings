@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings
 
 import os
 import sys
+import json
 import logging
 import importlib
 
@@ -23,6 +24,7 @@ def _create_default_logger():
 class PABaseSettings(BaseSettings):
     dot_env: Optional[str] = Field(default=None, description="The path to the .env file to load env variables from (optional)")
     dot_env_secrets: Optional[str] = Field(default=None, description="The path to a secrets .env file (optional, overrides dot_env values)")
+    dot_envs_global: Optional[list[str]] = Field(default=None, description="Global env files from __PA_SETTINGS_DOT_ENVS (lowest priority)")
     app_name: str
     app_version: str
 
@@ -56,12 +58,13 @@ class PABaseSettings(BaseSettings):
 
     def reload(self):
         """Reload env files and update this instance in-place."""
-        env_files = [p for p in [self.dot_env, self.dot_env_secrets] if p]
+        env_files = (self.dot_envs_global or []) + [p for p in [self.dot_env, self.dot_env_secrets] if p]
         new_instance = self.__class__(
             app_version=self.app_version,
             app_name=self.app_name,
             dot_env=self.dot_env,
             dot_env_secrets=self.dot_env_secrets,
+            dot_envs_global=self.dot_envs_global,
             _env_file=env_files if env_files else None
         )
         new_values = new_instance.model_dump()
@@ -106,6 +109,16 @@ class PABaseSettings(BaseSettings):
         if logger is None:
             logger = _create_default_logger()
 
+        global_envs_raw = os.environ.get("__PA_SETTINGS_DOT_ENVS", None)
+        dot_envs_global = None
+        if global_envs_raw:
+            dot_envs_global = json.loads(global_envs_raw)
+            if not isinstance(dot_envs_global, list):
+                raise ValueError("__PA_SETTINGS_DOT_ENVS must be a JSON array")
+            for p in dot_envs_global:
+                if not os.path.isfile(p):
+                    raise FileNotFoundError(f"Global env file '{p}' does not exist")
+
         env_prefix = cls.model_config.get('env_prefix', '')
         dot_env_path = os.environ.get(f"{env_prefix}DOT_ENV", None)
         if dot_env_path and not os.path.isfile(dot_env_path):
@@ -115,7 +128,7 @@ class PABaseSettings(BaseSettings):
         if dot_env_secrets_path and not os.path.isfile(dot_env_secrets_path):
             logger.warning(f"WARNING: secrets file '{dot_env_secrets_path}' does not exist\n")
 
-        env_files = [p for p in [dot_env_path, dot_env_secrets_path] if p]
+        env_files = (dot_envs_global or []) + [p for p in [dot_env_path, dot_env_secrets_path] if p]
         env_file_arg = env_files if env_files else None
 
         version = app_version
@@ -133,6 +146,7 @@ class PABaseSettings(BaseSettings):
                 app_name=pretty_app_name,
                 dot_env=dot_env_path,
                 dot_env_secrets=dot_env_secrets_path,
+                dot_envs_global=dot_envs_global,
                 _env_file=env_file_arg
             )
             settings._logger = logger

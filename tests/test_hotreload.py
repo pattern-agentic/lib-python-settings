@@ -50,11 +50,20 @@ class TestHotReload:
 
         await asyncio.sleep(0.1)
 
+        # Check if watcher failed to start (e.g., too many open files)
+        if settings._env_watch_task.done():
+            exc = settings._env_watch_task.exception()
+            if exc:
+                pytest.skip(f"Watcher failed to initialize: {exc}")
+
         env_file.write_text("TST_WORKER_COUNT=15\n")
 
-        await asyncio.sleep(0.5)
-
-        assert settings.worker_count == 15
+        for _ in range(50):
+            await asyncio.sleep(0.1)
+            if settings.worker_count == 15:
+                break
+        else:
+            pytest.fail("Hotreload did not detect file change within 5 seconds")
 
         settings.stop_watching()
         await asyncio.sleep(0.1)

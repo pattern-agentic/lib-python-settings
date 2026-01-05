@@ -1,4 +1,10 @@
 
+# 1.3.0
+
+Improvements:
+
+  - add support for injecting dot evn files via `__PA_SETTINGS_DOT_ENVS`
+  
 # 1.2.0
 
 Improvements:
