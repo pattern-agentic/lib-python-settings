@@ -6,8 +6,18 @@ from pydantic_settings import BaseSettings
 import os
 import sys
 import json
+import asyncio
 import logging
 import importlib
+
+try:
+    from watchfiles import awatch
+    WATCHFILES_AVAILABLE = True
+except ImportError:
+    awatch = None
+    WATCHFILES_AVAILABLE = False
+
+_hotreload_logger = logging.getLogger(__name__)
 
 
 def _create_default_logger():
@@ -90,6 +100,44 @@ class PABaseSettings(BaseSettings):
         keys = sorted(safe_desc.keys())
         return "\n".join([f"{indent}{k}: {safe_desc[k]}" for k in keys])
 
+    def _get_all_env_paths(self):
+        return (self.dot_envs_global or []) + [p for p in [self.dot_env, self.dot_env_secrets] if p]
+
+    async def _watch_env_file(self):
+        paths = self._get_all_env_paths()
+        if not paths:
+            return
+        _hotreload_logger.info(f"Watching for changes in {paths}")
+
+        async for changes in awatch(*paths):
+            _hotreload_logger.info("------------------------------")
+            _hotreload_logger.info(f"Detected env change: {changes}")
+            async with self._reload_lock:
+                try:
+                    self.reload()
+                except Exception as exc:
+                    _hotreload_logger.error(
+                        f"Failed to reload settings: {exc}",
+                        exc_info=True
+                    )
+
+    def watch_env_file(self):
+        if not WATCHFILES_AVAILABLE:
+            raise ImportError(
+                "Hot reload requires watchfiles. "
+                "Install with: pip install pattern_agentic_settings[hotreload]"
+            )
+        if self._get_all_env_paths():
+            if not hasattr(self, '_reload_lock'):
+                self._reload_lock = asyncio.Lock()
+            loop = asyncio.get_running_loop()
+            self._env_watch_task = loop.create_task(self._watch_env_file())
+
+    def stop_watching(self):
+        if hasattr(self, '_env_watch_task') and self._env_watch_task and not self._env_watch_task.done():
+            self._env_watch_task.cancel()
+            _hotreload_logger.info("Stopped watching env file")
+
     @staticmethod
     def _version_from_importlib(package_name: str, fallback: Optional[str]):
         try:
@@ -104,7 +152,8 @@ class PABaseSettings(BaseSettings):
              app_version: Optional[str] = None,
              fallback_version: Optional[str] = None,
              log_conf_on_startup: bool = True,
-             logger: Optional[logging.Logger] = None
+             logger: Optional[logging.Logger] = None,
+             watch_env_files: bool = False
              ):
         if logger is None:
             logger = _create_default_logger()
@@ -150,9 +199,12 @@ class PABaseSettings(BaseSettings):
                 _env_file=env_file_arg
             )
             settings._logger = logger
+            settings._env_watch_task = None
             logger.info(f"{pretty_app_name} v{version}")
             if log_conf_on_startup:
                 logger.info(f"\nConfiguration:\n{settings.safe_describe()}\n--------------------\n")
+            if watch_env_files:
+                settings.watch_env_file()
             return settings
         except ValidationError as exc:
             error_msg = PABaseSettings.format_config_validation_error(exc)

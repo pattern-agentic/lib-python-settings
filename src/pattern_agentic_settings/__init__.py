@@ -1,7 +1,10 @@
-from .base import PABaseSettings
+from .base import PABaseSettings, WATCHFILES_AVAILABLE
 
-try:
-    from .hotreload import HotReloadMixin
-    __all__ = ['PABaseSettings', 'HotReloadMixin']
-except ImportError:
-    __all__ = ['PABaseSettings']
+__all__ = ['PABaseSettings', 'WATCHFILES_AVAILABLE', 'HotReloadMixin']
+
+
+def __getattr__(name):
+    if name == 'HotReloadMixin':
+        from .hotreload import HotReloadMixin
+        return HotReloadMixin
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
